@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HARBOR HOPS — 横浜 生クラフトビール完全ガイド</title>
+<meta name="description" content="横浜・大さん橋を起点に、徒歩圏内で生クラフトビールが飲めるレストラン・パブ・バーを完全ガイド。野毛・関内・みなとみらいエリア21店舗収録。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+/* ============================================================
+   DESIGN TOKENS (Guinness / design.md準拠)
+   ============================================================ */
+:root {
+  --color-black:    #0a0406;
+  --color-surface:  #141E27;
+  --color-surface2: #1a2a36;
+  --color-dark:     #160b0e;
+  --color-gold:     #b9965b;
+  --color-gold-lt:  #d4af78;
+  --color-gold-br:  #F6CD63;
+  --color-white:    #ffffff;
+  --color-muted:    #777777;
+  --color-muted2:   #a0a0a0;
+  --color-border:   rgba(255,255,255,0.1);
+  --color-border2:  rgba(255,255,255,0.06);
+  --color-error:    #EC301B;
+  --color-overlay:  rgba(10,4,6,0.85);
+
+  --font-display: 'Oswald', 'Barlow Condensed', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+
+  --radius-card: 14px;
+  --radius-tag:  4px;
+  --transition:  0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+ul { list-style: none; }
+
+/* ============================================================
+   HEADER / HERO
+   ============================================================ */
+.hero {
+  background: linear-gradient(160deg, #0d0508 0%, #0a1018 50%, #0a0406 100%);
+  padding: 64px 20px 52px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(185,150,91,0.12), transparent 70%);
+  pointer-events: none;
+}
+.hero-overline {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: 16px;
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 15vw, 96px);
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--color-white);
+  margin-bottom: 10px;
+}
+.hero-title span { color: var(--color-gold); }
+.hero-subtitle {
+  font-family: var(--font-display);
+  font-size: clamp(13px, 3.5vw, 18px);
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-muted2);
+  margin-bottom: 28px;
+}
+.hero-lead {
+  font-size: 15px;
+  color: var(--color-muted2);
+  max-width: 480px;
+  margin: 0 auto 32px;
+  line-height: 1.8;
+}
+
+/* ============================================================
+   STICKY NAV
+   ============================================================ */
+.area-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,4,6,0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.area-nav::-webkit-scrollbar { display: none; }
+.area-nav-inner {
+  display: flex;
+  gap: 0;
+  min-width: max-content;
+  padding: 0 12px;
+}
+@media (min-width: 768px) {
+  .area-nav-inner {
+    min-width: unset;
+    justify-content: center;
+  }
+}
+.area-nav a {
+  display: block;
+  padding: 14px 16px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+.area-nav a:hover,
+.area-nav a.active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+
+/* ============================================================
+   INTRO
+   ============================================================ */
+.intro {
+  padding: 40px 24px;
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+.intro p {
+  font-size: 15px;
+  color: var(--color-muted2);
+  line-height: 1.9;
+}
+.intro strong { color: var(--color-white); font-weight: 600; }
+
+/* ============================================================
+   SECTION
+   ============================================================ */
+.section {
+  padding: 40px 20px 56px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.section + .section {
+  border-top: 1px solid var(--color-border2);
+}
+.section-head {
+  margin-bottom: 32px;
+}
+.section-eyebrow {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: 8px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 6vw, 38px);
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--color-white);
+  margin-bottom: 10px;
+}
+.section-meta {
+  font-size: 13px;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .section-head {
+    text-align: center;
+  }
+  .section-meta {
+    justify-content: center;
+  }
+  .map-section-head {
+    text-align: center;
+  }
+}
+.section-meta .walk-range {
+  background: rgba(185,150,91,0.12);
+  border: 1px solid rgba(185,150,91,0.25);
+  color: var(--color-gold-lt);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   CARD GRID
+   ============================================================ */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .card-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ============================================================
+   SHOP CARD
+   ============================================================ */
+.shop-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+.shop-card:hover {
+  border-color: rgba(185,150,91,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.card-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-tag);
+  text-transform: uppercase;
+}
+.tag-brewery { background: rgba(185,150,91,0.2); color: var(--color-gold-lt); border: 1px solid rgba(185,150,91,0.3); }
+.tag-domestic { background: rgba(80,180,80,0.15); color: #7dd87d; border: 1px solid rgba(80,180,80,0.3); }
+.tag-import   { background: rgba(80,130,220,0.15); color: #88aaee; border: 1px solid rgba(80,130,220,0.3); }
+.tag-latenite { background: rgba(150,80,200,0.15); color: #bb88ee; border: 1px solid rgba(150,80,200,0.3); }
+.tag-terrace  { background: rgba(80,180,160,0.15); color: #80d8c8; border: 1px solid rgba(80,180,160,0.3); }
+.tag-caution  { background: rgba(236,48,27,0.12); color: #f07060; border: 1px solid rgba(236,48,27,0.3); }
+.tag-food     { background: rgba(220,150,50,0.15); color: #e8a855; border: 1px solid rgba(220,150,50,0.3); }
+
+.card-name-en {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-white);
+  line-height: 1.1;
+}
+.card-name-jp {
+  font-size: 13px;
+  color: var(--color-muted2);
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.card-body {
+  padding: 16px 20px 0;
+  flex: 1;
+}
+.card-desc {
+  font-size: 13.5px;
+  color: var(--color-muted2);
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+.card-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-white);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.stat-chip .icon { font-size: 13px; }
+.stat-chip.gold { color: var(--color-gold-lt); background: rgba(185,150,91,0.1); border-color: rgba(185,150,91,0.25); }
+
+/* ============================================================
+   ACCORDION (details/summary — JSなし)
+   ============================================================ */
+.shop-details {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+}
+.shop-details summary {
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  transition: color var(--transition);
+  user-select: none;
+}
+.shop-details summary::-webkit-details-marker { display: none; }
+.shop-details summary:hover { color: var(--color-gold-lt); }
+.shop-details summary::after {
+  content: '＋';
+  font-size: 16px;
+  color: var(--color-muted);
+  transition: transform var(--transition);
+}
+.shop-details[open] summary::after {
+  content: '－';
+}
+.shop-details[open] summary { color: var(--color-gold-lt); }
+
+.details-inner {
+  padding: 4px 20px 20px;
+}
+.info-row {
+  display: flex;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label {
+  flex-shrink: 0;
+  width: 80px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding-top: 1px;
+}
+.info-value {
+  color: var(--color-muted2);
+  flex: 1;
+}
+.info-value a {
+  color: var(--color-gold-lt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  word-break: break-all;
+}
+.info-value a:hover { color: var(--color-gold-br); }
+
+/* ============================================================
+   CTA BUTTON
+   ============================================================ */
+.card-cta {
+  padding: 14px 20px 18px;
+}
+.btn-link {
+  display: block;
+  width: 100%;
+  padding: 11px 16px;
+  background: transparent;
+  border: 1px solid rgba(185,150,91,0.45);
+  color: var(--color-gold-lt);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  border-radius: 0;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  cursor: pointer;
+}
+.btn-link:hover {
+  background: var(--color-gold);
+  color: var(--color-black);
+  border-color: var(--color-gold);
+}
+
+/* ============================================================
+   MAPS LINK
+   ============================================================ */
+.maps-link {
+  color: var(--color-gold-lt);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px;
+}
+.maps-link:hover { color: var(--color-gold-br); }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.footer {
+  border-top: 1px solid var(--color-border);
+  padding: 40px 20px 52px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--color-black) 0%, #060204 100%);
+}
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  margin-bottom: 16px;
+}
+.footer-note {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.9;
+  max-width: 540px;
+  margin: 0 auto 24px;
+}
+.footer-date {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(185,150,91,0.55);
+}
+
+/* ============================================================
+   SCROLL TO TOP
+   ============================================================ */
+.scroll-top {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  background: var(--color-gold);
+  color: var(--color-black);
+  border: none;
+  border-radius: 0;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  z-index: 200;
+}
+.scroll-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.scroll-top:hover {
+  background: var(--color-gold-lt);
+}
+
+/* ============================================================
+   HERO IMAGE
+   ============================================================ */
+.hero-visual {
+  position: relative;
+  width: 100%;
+  background: var(--color-black);
+  line-height: 0;
+  display: flex;
+  justify-content: center;
+}
+.hero-visual img {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  display: block;
+}
+.hero-visual::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 28%;
+  background: linear-gradient(to bottom, var(--color-black) 0%, transparent 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+.hero-visual::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 28%;
+  background: linear-gradient(to top, var(--color-black) 0%, transparent 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .hero-visual img {
+    max-width: 640px;
+  }
+}
+
+/* ============================================================
+   MAP SECTION
+   ============================================================ */
+.map-section {
+  padding: 40px 20px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.map-section-head {
+  margin-bottom: 20px;
+}
+.map-container {
+  height: 360px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+@media (min-width: 640px) {
+  .map-container { height: 440px; }
+}
+@media (min-width: 1024px) {
+  .map-container { height: 520px; }
+}
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 14px;
+}
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-muted2);
+  letter-spacing: 0.3px;
+}
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+}
+/* Leaflet dark overrides */
+.leaflet-popup-content-wrapper {
+  background: #141E27 !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.7) !important;
+  padding: 0 !important;
+}
+.leaflet-popup-tip-container { margin-top: -1px; }
+.leaflet-popup-tip { background: #141E27 !important; box-shadow: none !important; }
+.leaflet-popup-close-button {
+  color: #777 !important;
+  font-size: 18px !important;
+  padding: 6px 8px !important;
+}
+.leaflet-popup-close-button:hover { color: #fff !important; }
+.leaflet-popup-content { margin: 0 !important; }
+.leaflet-control-attribution {
+  background: rgba(10,4,6,0.75) !important;
+  color: #555 !important;
+  font-size: 9px !important;
+}
+.leaflet-control-attribution a { color: #666 !important; }
+.leaflet-control-zoom a {
+  background: #141E27 !important;
+  color: #ccc !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+.leaflet-control-zoom a:hover { background: #1a2a36 !important; color: #fff !important; }
+/* popup content */
+.map-popup { padding: 12px 14px; }
+.map-popup-area {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-bottom: 7px;
+}
+.map-popup-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.map-popup-name-jp {
+  font-size: 11px;
+  color: #a0a0a0;
+  margin-bottom: 8px;
+}
+.map-popup-walk {
+  font-size: 12px;
+  color: #b9965b;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.map-popup-link {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #d4af78;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.map-popup-link:hover { color: #F6CD63; }
+/* 起点マーカー */
+.anchor-marker {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+}
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+.caution-note {
+  font-size: 11px;
+  color: #f07060;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <p class="hero-overline">Yokohama Craft Beer Guide</p>
+  <h1 class="hero-title">HARBOR<span> HOPS</span></h1>
+  <p class="hero-subtitle">横浜 生クラフトビール完全ガイド</p>
+  <p class="hero-lead">大さん橋から歩いて行ける、<br>本物の生クラフトビールを。<br>野毛・関内・みなとみらい 全21店舗収録。</p>
+</header>
+
+<!-- ===================== HERO IMAGE ===================== -->
+<div class="hero-visual" aria-hidden="true">
+  <img src="beer-hero.png" alt="横浜のクラフトビール — パブで輝くダークビールのグラス">
+</div>
+
+<!-- ===================== STICKY NAV ===================== -->
+<nav class="area-nav" aria-label="エリアナビゲーション">
+  <div class="area-nav-inner">
+    <a href="#area-sanbasikinrin">大さん橋付近</a>
+    <a href="#area-minatomirai">みなとみらい</a>
+    <a href="#area-kannai">関内・馬車道</a>
+    <a href="#area-noge">野毛・桜木町</a>
+    <a href="#area-hinodecho">日ノ出町・伊勢佐木</a>
+    <a href="#area-yokohamasta">横浜駅周辺</a>
+  </div>
+</nav>
+
+<!-- ===================== INTRO ===================== -->
+<div class="intro">
+  <p>横浜の玄関口、<strong>大さん橋</strong>を起点に——港町ならではの空気の中で、本物の生クラフトビールを。自社醸造のブルーパブから、世界各地のレアビールが揃う専門バーまで、歩いて行ける距離に個性豊かな店が集まっています。</p>
+</div>
+
+<!-- ===================== MAP SECTION ===================== -->
+<div class="map-section">
+  <div class="map-section-head">
+    <p class="section-eyebrow">Shop Map</p>
+    <h2 class="section-title">全店舗マップ</h2>
+  </div>
+  <div class="map-container" id="map"></div>
+  <div class="map-legend">
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#b9965b"></span>大さん橋付近</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#7dd87d"></span>みなとみらい・新港</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#F6CD63"></span>関内・馬車道</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#88aaee"></span>野毛・桜木町</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#80d8c8"></span>日ノ出町・伊勢佐木</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#bb88ee"></span>横浜駅周辺（参考）</span>
+    <span class="map-legend-item"><span class="map-legend-dot" style="background:#ffffff;border:2px solid #b9965b;box-sizing:border-box;"></span>大さん橋（起点）</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     エリア 1: 大さん橋至近（山下町）
+     ============================================================ -->
+<section class="section" id="area-sanbasikinrin">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 01 — Yamashitacho</p>
+    <h2 class="section-title">大さん橋付近</h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 約15〜20分</span>
+      <span>山下町・山下公園エリア（元町・中華街駅 徒歩3分）</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- BRUNTONS -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産特化</span>
+          <span class="tag tag-caution">⚠ 要営業確認</span>
+        </div>
+        <p class="card-name-en">BRUNTONS</p>
+        <p class="card-name-jp">ブラントンズ セレクテッド クラフトビアーズ</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">日本全国の小規模ブルワリーにこだわった国産クラフトビール専門バー。樽生6種＋リアルエール（英国式ハンドポンプ）＋瓶・缶約20種を常備。鳥取・滋賀・仙台など地方の個性派銘柄が揃う。酒販免許あり、テイクアウト可。2階に小上がり席も。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> タップ 6+リアルエール</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約15〜20分</span>
+          <span class="stat-chip"><span class="icon">🚃</span> 元町・中華街駅 3分</span>
+        </div>
+        <p class="caution-note">⚠ 営業状況は事前に公式SNS・電話でご確認ください</p>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区山下町104-17<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区山下町104-17" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">平日 14:00〜22:00 / 土日祝 11:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">水曜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-323-9773">045-323-9773</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">国産クラフト専門。大山Gビール（鳥取）、Two Rabbits（滋賀）、Great Dane（仙台）などレアな地方銘柄。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">軽食のみ</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web / SNS</span>
+            <span class="info-value">
+              <a href="http://www.bruntons.yokohama" target="_blank" rel="noopener">bruntons.yokohama</a><br>
+              Instagram: @bruntons_craftbeers
+            </span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="http://www.bruntons.yokohama" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+  </div><!-- /card-grid -->
+</section>
+
+<!-- ============================================================
+     エリア 2: みなとみらい・新港
+     ============================================================ -->
+<section class="section" id="area-minatomirai">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 02 — Minato Mirai / Shinko</p>
+    <h2 class="section-title">みなとみらい・新港</h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 12〜15分</span>
+      <span>横浜ハンマーヘッド・新港エリア</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- REVO BREWING -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-terrace">🌿 テラスあり</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">REVO BREWING</p>
+        <p class="card-name-jp">レボ・ブルーイング</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">店内に自社醸造所を併設した220席の大型ブルワリーレストラン。ガラス越しに醸造タンクを眺めながら最大20タップのオリジナルクラフトビールを楽しめる。ウッドファイヤーの肉料理をはじめ、約70種のフードも充実。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 最大20タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約12分</span>
+          <span class="stat-chip"><span class="icon">🪑</span> 220席</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区海岸通5-25-3 アパホテル&リゾート横浜ベイタワー1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区海岸通5-25-3" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜土 11:30〜23:00（LO 22:00）/ 日・祝 11:30〜22:00（LO 21:00）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-264-6280">045-264-6280</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">自社醸造オリジナルビール中心。横浜エリアのコラボビールも展開。国産100%。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">グラス1杯 900〜1,200円程度（要確認）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（ウッドファイヤー肉料理、ビールペアリングフード約70種）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.rrr-inc.com/revo-brewing" target="_blank" rel="noopener">rrr-inc.com/revo-brewing</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.rrr-inc.com/revo-brewing" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- QUAYS / NUMBER NINE BREWERY -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-terrace">🌿 テラスあり</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">QUAYS PACIFIC GRILL</p>
+        <p class="card-name-jp">キーズ パシフィック グリル / NUMBER NINE BREWERY</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">横浜ハンマーヘッド内、醸造所・蒸留所・焙煎所が一体化したユニークな施設。NUMBER NINE BREWERY製の自社クラフトビールを、横浜港を望む開放的なテラス席で味わえる。シーフードを主体にしたニューアメリカン料理と合わせて。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 8〜10タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約15分</span>
+          <span class="stat-chip"><span class="icon">🐾</span> テラスはペット可</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区新港2-14-1 横浜ハンマーヘッド1・2F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区新港2-14-1+横浜ハンマーヘッド" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜金 11:00〜22:00 / 土 8:00〜23:00 / 日 8:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-900-0310">045-900-0310</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">自社醸造（NUMBER NINE BREWERY）のオリジナルビール中心。国産100%。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">グラス1杯 1,000〜1,300円程度（要確認）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（シーフード主体のニューアメリカン料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.hammerhead.co.jp/shoprestaurant/detail/?cd=000002" target="_blank" rel="noopener">hammerhead.co.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.hammerhead.co.jp/shoprestaurant/detail/?cd=000002" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     エリア 3: 関内・馬車道
+     ============================================================ -->
+<section class="section" id="area-kannai">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 03 — Kannai / Bashamichi</p>
+    <h2 class="section-title">関内・馬車道</h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 15〜18分</span>
+      <span>横浜クラフトビールの激戦区</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- 横浜ビール UMAYA -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">YOKOHAMA BEER UMAYA</p>
+        <p class="card-name-jp">横浜ビール 本店レストラン「UMAYA」</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">1870年代創業の老舗・横浜ビール直営店。醸造所を店内に併設し、造りたての定番5種と季節限定ビールを提供。1Fは気軽に立ち飲みできるビアスタンド、2Fは神奈川産食材を使ったレストランの2スタイル。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 定番5種+限定</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約15分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区住吉町6-68-1 横浜関内地所ビル1・2F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区住吉町6-68-1" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">
+              1F ビアスタンド: 月〜金 16:00〜22:00 / 土 11:30〜22:00 / 日祝 11:30〜21:00<br>
+              2F レストラン: 月〜木 17:00〜22:00 / 金 16:00〜22:00 / 土 11:30〜22:00 / 日祝 11:30〜21:00
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">1F 年中無休 / 2F 年末年始のみ休</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-641-9901">045-641-9901</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">ピルスナー・ヴァイツェン・アルト・ペールエール・横浜ラガーなど定番5種と季節限定ビール。国産100%。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（神奈川・横浜産食材を使ったレストランメニュー）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://yokohamabeer.com/restaurant/" target="_blank" rel="noopener">yokohamabeer.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://yokohamabeer.com/restaurant/" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- ベアードタップルーム馬車道 -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+          <span class="tag tag-terrace">🌿 屋上あり</span>
+        </div>
+        <p class="card-name-en">BAIRD TAPROOM BASHAMICHI</p>
+        <p class="card-name-jp">ベアードタップルーム馬車道</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">静岡・沼津の名醸造所「Baird Brewing」の直営タップルーム。英国式ハンドポンプも備えた27タップは横浜最大規模。1F〜3Fの3フロア構成で、3Fは屋上ビアガーデン。スモークBBQとのペアリングが名物。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 27タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約18分</span>
+          <span class="stat-chip"><span class="icon">🏠</span> 3フロア</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区住吉町5-63-1<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区住吉町5-63-1" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜金 17:00〜23:00 / 土・祝 12:00〜23:00 / 日・連休最終日 12:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">年中無休</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-264-4961">045-264-4961</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">常時23種以上（定番＋シーズナル）。セッションエール・スタウト・ヴァイツェン・IPA多数。定番500ml 1,100円 / 250ml 600円。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（スモークBBQ・ピザ等）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://bairdbeer.com/pages/bashamichi-taproom" target="_blank" rel="noopener">bairdbeer.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://bairdbeer.com/pages/bashamichi-taproom" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- CRAFT BEER BAR -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産特化</span>
+        </div>
+        <p class="card-name-en">CRAFT BEER BAR</p>
+        <p class="card-name-jp">クラフトビアバー</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">2007年オープンの老舗。全国の厳選クラフトビールを11タップで提供。志賀高原・箕面ビール・スワンレイク・ベアレン醸造所など個性派ブルワリー中心。完全禁煙、全18席のこぢんまりとした空間でじっくり飲みたい通向けの一軒。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 11タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約15分</span>
+          <span class="stat-chip"><span class="icon">🚭</span> 完全禁煙</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区太田町2-31-3 コーポサンライフ太田町102<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区太田町2-31-3" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">火〜金 16:00〜23:30 / 土・日・祝 12:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">月曜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-651-0440">045-651-0440</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">グラス（320ml）700円 / パイント（500ml）1,000円</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">軽食のみ</span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://craftbeerbar2007.seesaa.net/" target="_blank" rel="noopener">ブログサイトへ →</a>
+      </div>
+    </article>
+
+    <!-- アンテナアメリカ -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-import">🌏 アメリカ輸入</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">ANTENNA AMERICA</p>
+        <p class="card-name-jp">アンテナアメリカ 関内店</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">アメリカの小規模・家族経営ブルワリーから直輸入したクラフトビールを約200種（ボトル・缶含む）取り揃える専門店。プルドポーク等のアメリカンBBQ料理との相性も抜群。USA産クラフトビールに特化したビール好き必訪の空間。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 約8タップ+200種ボトル</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約18分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区吉田町5-4 第6吉田興産ビル5F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区吉田町5-4" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">木 16:00〜22:00 / 金 16:00〜22:30 / 土 11:00〜22:30 / 日・祝 11:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">月・火・水</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-315-5228">045-315-5228</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">アメリカ直輸入クラフトビール200種以上。小規模・家族経営ブルワリーのレアビール多数。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（プルドポーク等のアメリカンBBQ料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.naganotrading.com" target="_blank" rel="noopener">naganotrading.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.naganotrading.com" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- 横浜ベイブルーイング関内 -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">YOKOHAMA BAY BREWING KANNAI</p>
+        <p class="card-name-jp">横浜ベイブルーイング 関内本店</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">「世界一のピルスナーを造る」を掲げる横浜ベイブルーイングの本店。代表作「ベイピルスナー」はじめ、戸塚工場で醸造した常時10〜14種の生ビールを直接提供するブルーパブ。ラガー系に強いこだわりを持つ一軒。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 10〜14タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約18分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区福富町東通2-15-1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区福富町東通2-15" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜金 16:00〜23:00 / 土日祝 13:00〜23:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-341-0450">045-341-0450</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">ベイピルスナーを代表作にラガー系が充実。定番＋限定で常時10〜14種。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.yokohamabaybrewing.jp/kannai.html" target="_blank" rel="noopener">yokohamabaybrewing.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.yokohamabaybrewing.jp/kannai.html" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     エリア 4: 野毛・桜木町
+     ============================================================ -->
+<section class="section" id="area-noge">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 04 — Noge / Sakuragicho</p>
+    <h2 class="section-title">野毛・桜木町</h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 20〜25分</span>
+      <span>横浜屈指の飲み屋街 — 個性豊かな店が密集</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- Sakura Taps -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">SAKURA TAPS</p>
+        <p class="card-name-jp">サクラ・タップス クラフトビール&コーヒー</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">日替わり8タップで全国各地のクラフトビールを常に新鮮な状態で提供。ハンドドリップコーヒー（湘南・27Coffee Roasters）との組み合わせも話題。定期的な銘柄入れ替えで常連も飽きさせない。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 8タップ（日替わり）</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約20分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区福富町東通2-15 関内ウエストビル2F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区福富町東通2-15" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜金 15:00〜23:30 / 土日祝 13:00〜23:30</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-334-8873">045-334-8873</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">全国クラフトビールを8タップで日替わり提供。多様なスタイルを網羅。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（季節の料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://sakurataps.com" target="_blank" rel="noopener">sakurataps.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://sakurataps.com" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- Southbound -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-import">🌏 アメリカ輸入</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+          <span class="tag tag-terrace">🌿 テラスあり</span>
+        </div>
+        <p class="card-name-en">SOUTHBOUND</p>
+        <p class="card-name-jp">サウスバウンド</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">アメリカ東海岸・南部の家族・個人経営ブルワリーから直輸入したクラフトビール専門。12タップはIPA・ブラウンエール・サワーなど多様なスタイル。大岡川沿いのテラス席でプルドポークナチョスと合わせて。子ども連れも歓迎。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 12タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約25分</span>
+          <span class="stat-chip"><span class="icon">🐾</span> テラスはペット可</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区日ノ出町1-24 日ノ出町ビル1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区日ノ出町1-24" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">火 17:00〜22:00 / 水木 15:00〜22:00 / 金 15:00〜23:00 / 土 12:00〜23:00 / 日 12:00〜21:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">月曜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-341-0325">045-341-0325</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">ハーフパイント 800円〜 / パイント 1,300円〜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（プルドポークナチョス・ハッシュパピーなどアメリカ南部郷土料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://southbound.jp" target="_blank" rel="noopener">southbound.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://southbound.jp" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- 心の月 -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">CRAFT BEER KITCHEN KOKORO NO TSUKI</p>
+        <p class="card-name-jp">クラフトビールキッチン 心の月</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">ホテル出身の店主による本格中華料理とクラフトビールのペアリングが話題の野毛の一軒。国内外のクラフトビール6タップを揃え、本格中華との意外な組み合わせを楽しむユニークなコンセプト。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 6タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約22分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区宮川町2-57 LRビル2F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区宮川町2-57" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">火〜金 15:00〜23:00 / 土・日 14:00〜23:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">月曜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-315-3580">045-315-3580</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">3,000〜3,999円</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">Hazy IPAなど国内外クラフトビールを6タップで提供。こだわりのつまみに合わせたペアリング提案が得意。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（中華料理を中心としたおつまみ）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">SNS</span>
+            <span class="info-value">Instagram: @cocoronotuki</span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.instagram.com/cocoronotuki.noge/" target="_blank" rel="noopener">Instagram を見る →</a>
+      </div>
+    </article>
+
+    <!-- Onder -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">ONDER</p>
+        <p class="card-name-jp">オンダー（クラフトビール×鴨×燻製）</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">コンクリート打ちっぱなしのスタイリッシュな空間で、国内外のクラフトビールと専門の燻製・鴨料理を楽しめる5階の隠れ家バー。30種以上のドリンクから好みで選べるスタイルが人気。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> クラフトビール30種以上</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約22分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区花咲町1-28-1 5F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区花咲町1-28-1" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-231-5091">045-231-5091</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">国内外クラフトビールをミックス。冷蔵庫から好みで選べるスタイル。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（本格燻製・鴨料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">SNS</span>
+            <span class="info-value">Instagram: @noge_onder</span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.instagram.com/noge_onder/" target="_blank" rel="noopener">Instagram を見る →</a>
+      </div>
+    </article>
+
+    <!-- アポロカンパニー -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-latenite">🌙 深夜営業</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">APOLLO COMPANY</p>
+        <p class="card-name-jp">肉とクラフトビールの店 アポロカンパニー 野毛桜木町</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">深夜3時まで営業する野毛の肉料理×クラフトビールの店。季節に合わせてスタッフが厳選した4種の国産樽生クラフトビールを、自家製ハーブソーセージ・タコスなどの肉料理と合わせて楽しめる。年中無休。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 4タップ（季節入れ替え）</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約22分</span>
+          <span class="stat-chip"><span class="icon">🌙</span> 翌3:00まで</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区花咲町1-9 1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区花咲町1-9" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜日 18:00〜翌3:00（年中無休）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-261-8308">045-261-8308</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">スタッフ厳選の国産クラフト4種。季節ごとに入れ替え。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（自家製ハーブソーセージ・タコス等の肉料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.apollocompany.net/" target="_blank" rel="noopener">apollocompany.net</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.apollocompany.net/" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- 金井商店 -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">KANAI SHOUTEN</p>
+        <p class="card-name-jp">金井商店</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">野毛商店街に佇む自然派居酒屋。6タップの国産クラフト樽生ビールを、旬の素材を使った手造りおつまみとともに。ワイン・日本酒も充実し、地元の常連客が集うアットホームな空間。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 6タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約23分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区野毛町1-15 はやせビル1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区野毛町1-15" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">17:00〜24:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">不定休</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-334-7703">045-334-7703</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">国産クラフトビール6タップ。ワイン・日本酒も充実。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（手造りおつまみ・季節料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">SNS</span>
+            <span class="info-value">Instagram: @kanai_shouten</span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.instagram.com/kanai_shouten/" target="_blank" rel="noopener">Instagram を見る →</a>
+      </div>
+    </article>
+
+    <!-- HITSUJI -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">HITSUJI</p>
+        <p class="card-name-jp">ヒツジ 野毛店</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">肉ビストロとクラフトビールを組み合わせた野毛の人気店。5〜6タップはすべて国産クラフトビールを生で提供し、樽が空になり次第、別の銘柄に入れ替えるため訪れるたびに新しい出会いがある。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 5〜6タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約22分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区野毛町1-24-5<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区野毛町1-24-5" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-308-9208">045-308-9208</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">国産クラフト生ビール5〜6タップ。樽切れ次第、随時銘柄を入れ替え。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（肉ビストロメニュー）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">SNS</span>
+            <span class="info-value">Instagram: @hitsuji0622</span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.instagram.com/hitsuji0622/" target="_blank" rel="noopener">Instagram を見る →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     エリア 5: 日ノ出町・伊勢佐木町
+     ============================================================ -->
+<section class="section" id="area-hinodecho">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 05 — Hinodecho / Isezakicho</p>
+    <h2 class="section-title">日ノ出町・伊勢佐木町</h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 20〜25分</span>
+      <span>大岡川沿い・伊勢佐木エリア</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- 横浜ジン蒸溜所 -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ベイブルーイング系列</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+        </div>
+        <p class="card-name-en">YOKOHAMA GIN DISTILLERY</p>
+        <p class="card-name-jp">横浜ジン蒸溜所（横浜ベイブルーイング系列）</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">日ノ出町の高架下という独特のロケーションに2021年オープン。横浜ベイブルーイング系列のクラフトジン蒸溜所で、チェコ製ビールサーバーで提供する樽生クラフトビールとクラフトジンのクロスオーバー体験が楽しめる。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 樽生クラフトビール</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約25分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区日ノ出町1-103-1（日ノ出町高架下）<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区日ノ出町1-103-1" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月・木・金 17:00〜23:00 / 土 15:00〜23:00 / 日・祝 15:00〜22:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">火・水</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">横浜ベイブルーイング醸造の樽生ビール。チェコ製高圧サーバーで提供。クラフトジン・ジンソーダとの組み合わせも。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">軽食のみ</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.yokohamabaybrewing.jp/distillery.html" target="_blank" rel="noopener">yokohamabaybrewing.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.yokohamabaybrewing.jp/distillery.html" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- 伊勢佐木けむり -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-latenite">🌙 深夜営業</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">ISEZAKI KEMURI</p>
+        <p class="card-name-jp">Smoke &amp; Craftbeer 伊勢佐木けむり</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">自家製燻製専門料理とクラフトビールのユニークな組み合わせ。国内外50種以上のクラフトビール（ボトル・缶含む）を揃え、スタッフが好みに合わせて提案。深夜2時まで営業する貴重な一軒。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 50種以上</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 徒歩約20分</span>
+          <span class="stat-chip"><span class="icon">🌙</span> 翌2:00まで</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市中区伊勢佐木町3-102 第1中川ビル1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市中区伊勢佐木町3-102" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">火〜金 18:00〜翌2:00 / 土 17:00〜翌2:00 / 日 16:00〜24:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">月曜</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-315-5857">045-315-5857</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">国内外クラフトビール50種以上。タップビールの数は要確認。好みに合わせたスタッフ提案あり。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり（全て自家製の本格燻製料理）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://isezaki-kemuri.com" target="_blank" rel="noopener">isezaki-kemuri.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://isezaki-kemuri.com" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============================================================
+     エリア 6: 横浜駅周辺（参考）
+     ============================================================ -->
+<section class="section" id="area-yokohamasta">
+  <div class="section-head">
+    <p class="section-eyebrow">Area 06 — Yokohama Station (Reference)</p>
+    <h2 class="section-title">横浜駅周辺 <small style="font-size:0.5em;letter-spacing:1px;">参考</small></h2>
+    <div class="section-meta">
+      <span class="walk-range">🚶 徒歩 35〜40分 / 電車利用推奨</span>
+      <span>電車で訪れる価値アリの名店</span>
+    </div>
+  </div>
+  <div class="card-grid">
+
+    <!-- THRASH ZONE -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 自家醸造あり</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-latenite">🌙 深夜営業</span>
+        </div>
+        <p class="card-name-en">THRASH ZONE</p>
+        <p class="card-name-jp">スラッシュゾーン</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">「EXTREME BEER ONLY」を哲学に掲げる2006年創業のナノブルワリー。25タップのほぼ全てが高アルコール・ホップ強めのIPA系。代表作「Hop Deicide」（IPA 8.9%）はUntappdで評価4.00超のクラフトビール通の聖地。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 25タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 横浜駅から徒歩5分</span>
+          <span class="stat-chip"><span class="icon">🌙</span> 深夜まで</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市神奈川区鶴屋町2-10-7 田村ビル1F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市神奈川区鶴屋町2-10-7" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜金 16:00〜23:30 / 土日祝 12:00〜23:30（最新はSNSで確認推奨）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">自家醸造約50%＋ゲストビール。West Coast IPA・ダブルIPA・インペリアルIPA特化。メニューなし、スタッフと対話して選ぶスタイル。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">パイント 700〜800円</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">軽食のみ</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.beerdrinkinginternational.com" target="_blank" rel="noopener">beerdrinkinginternational.com</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.beerdrinkinginternational.com" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- キング ペリカン -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-latenite">🌙 深夜営業</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">KING PELICAN</p>
+        <p class="card-name-jp">キング ペリカン（鶴見・生麦）</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">生麦駅1分の下町イングリッシュパブ。横浜ビールの直送タップビールをカウンターで気軽に楽しめる。スコッチ・バーボン100種以上も揃い、一人でも、グループでもくつろげる本格パブの雰囲気。深夜2時まで営業。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 横浜ビール直送タップ</span>
+          <span class="stat-chip"><span class="icon">🚃</span> 生麦駅から徒歩1分</span>
+          <span class="stat-chip"><span class="icon">🌙</span> 翌2:00まで</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市鶴見区生麦1-11-12<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市鶴見区生麦1-11-12" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">月〜土 17:00〜翌2:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">日曜・祝日</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-503-1950">045-503-1950</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">横浜ビール（地元マイクロブルワリー）のタップビールを直送で提供。スコッチ・バーボン100種以上も。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">価格帯</span>
+            <span class="info-value">2,000〜2,999円</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="http://www.kingpelican.jp/" target="_blank" rel="noopener">kingpelican.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="http://www.kingpelican.jp/" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+    <!-- 横浜ベイブルーイング 横浜フロント -->
+    <article class="shop-card">
+      <div class="card-header">
+        <div class="card-tags">
+          <span class="tag tag-brewery">🏭 ブルワリー直営</span>
+          <span class="tag tag-domestic">🇯🇵 国産</span>
+          <span class="tag tag-food">🍽 食事あり</span>
+        </div>
+        <p class="card-name-en">YOKOHAMA BAY BREWING YOKOHAMA FRONT</p>
+        <p class="card-name-jp">横浜ベイブルーイング 横浜フロント店</p>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">横浜駅直結「THE YOKOHAMA FRONT」内のベイブルーイング旗艦店。自社醸造ビール15種＋ゲストビール10種の計25タップは関内本店より規模が大きく、昼飲みからディナーまで年中無休で利用できる。</p>
+        <div class="card-stats">
+          <span class="stat-chip gold"><span class="icon">🍺</span> 25タップ</span>
+          <span class="stat-chip"><span class="icon">🚶</span> 横浜駅から徒歩3分</span>
+        </div>
+      </div>
+      <details class="shop-details">
+        <summary>詳細情報を見る</summary>
+        <div class="details-inner">
+          <div class="info-row">
+            <span class="info-label">住所</span>
+            <span class="info-value">
+              横浜市神奈川区鶴屋町1-41 THE YOKOHAMA FRONT 2F<br>
+              <a class="maps-link" href="https://maps.google.com/?q=横浜市神奈川区鶴屋町1-41+THE+YOKOHAMA+FRONT" target="_blank" rel="noopener">📍 Google Maps で開く</a>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">営業時間</span>
+            <span class="info-value">全日 11:30〜23:00（フードLO 22:00 / ドリンクLO 22:30）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">定休日</span>
+            <span class="info-value">年中無休</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TEL</span>
+            <span class="info-value"><a href="tel:045-534-3411">045-534-3411</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ビールの特徴</span>
+            <span class="info-value">自社醸造15種＋ゲストブルワリー10種の計25タップ。関内本店より品揃え豊富。</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">食事</span>
+            <span class="info-value">あり</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Web</span>
+            <span class="info-value"><a href="https://www.yokohamabaybrewing.jp/yokohamafront.html" target="_blank" rel="noopener">yokohamabaybrewing.jp</a></span>
+          </div>
+        </div>
+      </details>
+      <div class="card-cta">
+        <a class="btn-link" href="https://www.yokohamabaybrewing.jp/yokohamafront.html" target="_blank" rel="noopener">公式サイトへ →</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="footer">
+  <p class="footer-logo">HARBOR HOPS</p>
+  <p class="footer-note">
+    掲載情報（営業時間・定休日・価格帯・メニュー）は変更される場合があります。<br>
+    訪問前に各店舗の公式ウェブサイト・SNS・お電話にて最新情報をご確認ください。<br>
+    特にBRUNTONS（山下町）は営業状況の事前確認を強くお勧めします。
+  </p>
+  <p class="footer-date">作成日: 2026年6月27日 &nbsp;|&nbsp; 最終更新: 2026年6月27日</p>
+</footer>
+
+<!-- ===================== SCROLL TO TOP ===================== -->
+<button class="scroll-top" id="scrollTop" aria-label="ページトップへ戻る" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ============================================================
+   LEAFLET MAP
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof L === 'undefined') { console.error('Leaflet not loaded'); return; }
+  const OSANBASHI = [35.44805, 139.64598];
+
+  const map = L.map('map', {
+    center: OSANBASHI,
+    zoom: 14,
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+
+  /* カスタムSVGピン生成 */
+  function makePin(color) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="34" viewBox="0 0 26 34">
+      <path d="M13 0C5.82 0 0 5.82 0 13c0 8.67 13 21 13 21S26 21.67 26 13C26 5.82 20.18 0 13 0z" fill="${color}" opacity="0.92"/>
+      <circle cx="13" cy="12.5" r="4.5" fill="#0a0406" opacity="0.7"/>
+    </svg>`;
+    return L.divIcon({
+      className: '',
+      html: `<div style="filter:drop-shadow(0 2px 5px rgba(0,0,0,0.65))">${svg}</div>`,
+      iconSize: [26, 34],
+      iconAnchor: [13, 34],
+      popupAnchor: [0, -36],
+    });
+  }
+
+  /* 起点マーカー（大さん橋） */
+  const anchorIcon = L.divIcon({
+    className: '',
+    html: `<div class="anchor-marker" title="大さん橋（起点）">⚓</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -18],
+  });
+  L.marker(OSANBASHI, { icon: anchorIcon })
+    .addTo(map)
+    .bindPopup(`<div class="map-popup"><div class="map-popup-name" style="color:#b9965b">大さん橋</div><div class="map-popup-name-jp" style="margin-bottom:0">📍 起点スポット</div></div>`);
+
+  /* 店舗データ */
+  const shops = [
+    /* ── 大さん橋至近 ── */
+    { name:'BRUNTONS', jp:'ブラントンズ', area:'大さん橋付近', id:'area-sanbasikinrin', walk:'徒歩約15〜20分', lat:35.44548, lng:139.64875, color:'#b9965b' },
+
+    /* ── みなとみらい・新港 ── */
+    { name:'REVO BREWING', jp:'レボ・ブルーイング', area:'みなとみらい・新港', id:'area-minatomirai', walk:'徒歩約12分', lat:35.45653, lng:139.64085, color:'#7dd87d' },
+    { name:'QUAYS PACIFIC GRILL', jp:'キーズ パシフィック グリル', area:'みなとみらい・新港', id:'area-minatomirai', walk:'徒歩約15分', lat:35.45750, lng:139.63772, color:'#7dd87d' },
+
+    /* ── 関内・馬車道 ── */
+    { name:'YOKOHAMA BEER UMAYA', jp:'横浜ビール UMAYA', area:'関内・馬車道', id:'area-kannai', walk:'徒歩約15分', lat:35.44402, lng:139.63528, color:'#F6CD63' },
+    { name:'BAIRD TAPROOM', jp:'ベアードタップルーム馬車道', area:'関内・馬車道', id:'area-kannai', walk:'徒歩約18分', lat:35.44510, lng:139.63615, color:'#F6CD63' },
+    { name:'CRAFT BEER BAR', jp:'クラフトビアバー', area:'関内・馬車道', id:'area-kannai', walk:'徒歩約15分', lat:35.44560, lng:139.63550, color:'#F6CD63' },
+    { name:'ANTENNA AMERICA', jp:'アンテナアメリカ 関内店', area:'関内・馬車道', id:'area-kannai', walk:'徒歩約18分', lat:35.44290, lng:139.63571, color:'#F6CD63' },
+    { name:'YOKOHAMA BAY BREWING KANNAI', jp:'横浜ベイブルーイング 関内本店', area:'関内・馬車道', id:'area-kannai', walk:'徒歩約18分', lat:35.44222, lng:139.63481, color:'#F6CD63' },
+
+    /* ── 野毛・桜木町 ── */
+    { name:'SAKURA TAPS', jp:'サクラ・タップス', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約20分', lat:35.44235, lng:139.63510, color:'#88aaee' },
+    { name:'SOUTHBOUND', jp:'サウスバウンド', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約25分', lat:35.44022, lng:139.62856, color:'#88aaee' },
+    { name:'KOKORO NO TSUKI', jp:'心の月', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約22分', lat:35.44058, lng:139.63010, color:'#88aaee' },
+    { name:'ONDER', jp:'オンダー', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約22分', lat:35.44255, lng:139.63148, color:'#88aaee' },
+    { name:'APOLLO COMPANY', jp:'アポロカンパニー', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約22分', lat:35.44278, lng:139.63180, color:'#88aaee' },
+    { name:'KANAI SHOUTEN', jp:'金井商店', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約23分', lat:35.44308, lng:139.62995, color:'#88aaee' },
+    { name:'HITSUJI', jp:'ヒツジ', area:'野毛・桜木町', id:'area-noge', walk:'徒歩約22分', lat:35.44325, lng:139.62970, color:'#88aaee' },
+
+    /* ── 日ノ出町・伊勢佐木 ── */
+    { name:'YOKOHAMA GIN DISTILLERY', jp:'横浜ジン蒸溜所', area:'日ノ出町・伊勢佐木', id:'area-hinodecho', walk:'徒歩約25分', lat:35.44055, lng:139.62780, color:'#80d8c8' },
+    { name:'ISEZAKI KEMURI', jp:'伊勢佐木けむり', area:'日ノ出町・伊勢佐木', id:'area-hinodecho', walk:'徒歩約20分', lat:35.44185, lng:139.63718, color:'#80d8c8' },
+
+    /* ── 横浜駅周辺（参考）── */
+    { name:'THRASH ZONE', jp:'スラッシュゾーン', area:'横浜駅周辺（参考）', id:'area-yokohamasta', walk:'横浜駅から徒歩5分', lat:35.46680, lng:139.62132, color:'#bb88ee' },
+    { name:'YOKOHAMA BAY BREWING FRONT', jp:'横浜ベイブルーイング 横浜フロント', area:'横浜駅周辺（参考）', id:'area-yokohamasta', walk:'横浜駅から徒歩3分', lat:35.46598, lng:139.62218, color:'#bb88ee' },
+    { name:'KING PELICAN', jp:'キング ペリカン', area:'横浜駅周辺（参考）', id:'area-yokohamasta', walk:'生麦駅から徒歩1分', lat:35.49790, lng:139.66810, color:'#bb88ee' },
+  ];
+
+  shops.forEach(s => {
+    const popupHtml = `
+      <div class="map-popup">
+        <div class="map-popup-area" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44">${s.area}</div>
+        <div class="map-popup-name">${s.name}</div>
+        <div class="map-popup-name-jp">${s.jp}</div>
+        <div class="map-popup-walk">🚶 ${s.walk}</div>
+        <a class="map-popup-link" href="#${s.id}">詳細を見る ↓</a>
+      </div>`;
+    L.marker([s.lat, s.lng], { icon: makePin(s.color) })
+      .addTo(map)
+      .bindPopup(popupHtml, { maxWidth: 220 });
+  });
+});
+
+/* スクロールトップボタン */
+const scrollTop = document.getElementById('scrollTop');
+window.addEventListener('scroll', () => {
+  scrollTop.classList.toggle('visible', window.scrollY > 400);
+}, { passive: true });
+
+/* エリアナビ スクロールスパイ */
+const sections = document.querySelectorAll('.section[id]');
+const navLinks = document.querySelectorAll('.area-nav a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`.area-nav a[href="#${entry.target.id}"]`);
+      if (active) {
+        active.classList.add('active');
+        active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
