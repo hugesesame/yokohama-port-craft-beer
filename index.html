@@ -602,6 +602,10 @@ ul { list-style: none; }
   box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
 }
 /* Leaflet dark overrides */
+/* タイル画像のみを反転してダークテーマ化（マーカー・ポップアップは別ペインなので影響なし） */
+.leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.95) saturate(0.15) grayscale(0.8);
+}
 .leaflet-popup-content-wrapper {
   background: #141E27 !important;
   color: #fff !important;
@@ -2896,9 +2900,9 @@ document.addEventListener('DOMContentLoaded', function() {
     attributionControl: true,
   });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
+  /* CARTO の dark_all は API キー必須になったため、OSM 日本タイル + CSS フィルタでダーク化 */
+  L.tileLayer('https://tile.openstreetmap.jp/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Tiles: <a href="https://www.osmf.jp/">OSMFJ</a>',
     maxZoom: 19,
   }).addTo(map);
 
